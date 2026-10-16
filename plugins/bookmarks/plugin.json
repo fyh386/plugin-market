@@ -1,0 +1,10 @@
+{
+  "id": "builtin.bookmarks",
+  "name": "网址收藏",
+  "version": "1.0.0",
+  "author": "TaskBar Plus",
+  "description": "任务栏网址收藏夹：点击条目浏览器直接跳转，支持增删与导入导出",
+  "permissions": ["shell", "clipboard"],
+  "width": { "min": 50, "max": 120, "default": 64 },
+  "config": { "bookmarks": [] }
+}
