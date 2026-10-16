@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { background:transparent; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
+  body { display:flex; flex-direction:column; justify-content:flex-end; height:100vh; overflow:hidden; }
+  #strip { height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    position:relative; width:100%; max-width:64px; margin-left:auto;
+    background:#2b2c33; border:1px solid #41424d; border-radius:7px; }
+  #strip:hover { border-color:#4c8dff; }
+  #strip svg { width:18px; height:18px; stroke:#4c8dff; fill:none; stroke-width:1.7;
+    stroke-linecap:round; stroke-linejoin:round; }
+  #badge { position:absolute; top:2px; right:4px; min-width:14px; height:13px; border-radius:7px;
+    background:#4c8dff; color:#fff; font-size:8.5px; line-height:13px; text-align:center;
+    padding:0 3px; font-family:Consolas,monospace; }
+  #panel { display:none; background:#1e1f24; border:1px solid #3a3b45; border-radius:10px;
+    margin:0 4px 6px; padding:12px 14px; color:#d5d6de; font-size:12px; width:340px; }
+  #panel.open { display:block; }
+  .hd { display:flex; align-items:center; margin-bottom:8px; font-size:11px; color:#6a6b76; }
+  .hd b { color:#d5d6de; font-weight:500; }
+  .hd .sp { flex:1; }
+  .mini { height:22px; padding:0 9px; border:1px solid #3a3b45; border-radius:5px; background:#141519;
+    color:#9a9ba6; font-size:10.5px; cursor:pointer; }
+  .mini:hover { color:#fff; border-color:#4c8dff; }
+  .add { display:flex; gap:6px; margin-bottom:8px; }
+  .add input { flex:1; min-width:0; height:24px; background:#141519; border:1px solid #3a3b45;
+    border-radius:5px; color:#d5d6de; font-size:11px; padding:0 8px; outline:none; }
+  .add input:focus { border-color:#4c8dff; }
+  #list { max-height:210px; overflow:auto; }
+  .it { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; }
+  .it:hover { background:#33343d; }
+  .fav { width:18px; height:18px; border-radius:5px; flex-shrink:0; display:flex; align-items:center;
+    justify-content:center; font-size:9.5px; font-weight:600; color:#fff; }
+  .nm { flex:1; min-width:0; }
+  .nm .n { font-size:11.5px; color:#e8e9ef; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .nm .u { font-size:9.5px; color:#6a6b76; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .del { width:18px; height:18px; border:none; background:transparent; color:#55565f; font-size:13px;
+    cursor:pointer; border-radius:4px; line-height:1; flex-shrink:0; }
+  .del:hover { color:#ff6b6b; background:#3a2226; }
+  .empty { color:#4a4b55; font-size:11px; text-align:center; padding:16px 0; }
+  #tip { font-size:10px; color:#4a4b55; margin-top:8px; text-align:center; }
+  #menu { display:none; position:absolute; right:12px; top:34px; background:#26272e; border:1px solid #3a3b45;
+    border-radius:8px; padding:6px; z-index:10; width:150px; }
+  #menu.open { display:block; }
+  #menu button { display:block; width:100%; text-align:left; height:26px; border:none; background:transparent;
+    color:#c9cad2; font-size:11px; border-radius:5px; cursor:pointer; padding:0 8px; }
+  #menu button:hover { background:#33343d; }
+</style>
+</head>
+<body>
+  <div id="panel">
+    <div class="hd">
+      <b>网址收藏</b><span class="sp"></span>
+      <button class="mini" id="more">⋯</button>
+    </div>
+    <div id="menu">
+      <button id="m-export">导出 JSON</button>
+      <button id="m-import">导入 JSON</button>
+      <button id="m-clear">清空全部</button>
+    </div>
+    <div class="add">
+      <input id="in-name" placeholder="名称">
+      <input id="in-url" placeholder="https://…" style="flex:1.6">
+      <button class="mini" id="btn-add" style="height:24px">添加</button>
+    </div>
+    <div id="list"><div class="empty">还没有收藏，先在下方添加</div></div>
+    <div id="tip">点击条目用浏览器打开 · 悬停出现删除按钮</div>
+  </div>
+  <div id="strip" title="网址收藏">
+    <svg viewBox="0 0 24 24"><path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    <span id="badge">0</span>
+  </div>
+<script>
+(async () => {
+  const panel = document.getElementById('panel');
+  const list = document.getElementById('list');
+  const badge = document.getElementById('badge');
+  const menu = document.getElementById('menu');
+  let expanded = false, items = [];
+
+  const FAV_COLORS = ['#4c8dff', '#8a5cff', '#2fbf8f', '#e8a13c', '#e05c8a', '#38b6c9'];
+
+  function hostOf(url) {
+    try { return new URL(url).host; } catch (e) { return url; }
+  }
+  function favColor(name) {
+    let h = 0;
+    for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return FAV_COLORS[h % FAV_COLORS.length];
+  }
+
+  async function load() {
+    const cfg = await tbp.config();
+    items = Array.isArray(cfg.bookmarks) ? cfg.bookmarks : [];
+  }
+  async function save() {
+    await tbp.saveConfig({ bookmarks: items });
+  }
+
+  function render() {
+    badge.textContent = items.length;
+    if (!expanded) return;
+    if (!items.length) {
+      list.innerHTML = '<div class="empty">还没有收藏，先在下方添加</div>';
+      return;
+    }
+    list.innerHTML = '';
+    items.forEach((it, i) => {
+      const d = document.createElement('div');
+      d.className = 'it';
+      const f = document.createElement('span');
+      f.className = 'fav';
+      f.style.background = favColor(it.name || '?');
+      f.textContent = (it.name || '?').trim().charAt(0).toUpperCase();
+      const nm = document.createElement('div');
+      nm.className = 'nm';
+      const n = document.createElement('div'); n.className = 'n'; n.textContent = it.name; n.title = it.name;
+      const u = document.createElement('div'); u.className = 'u'; u.textContent = hostOf(it.url); u.title = it.url;
+      nm.append(n, u);
+      const del = document.createElement('button');
+      del.className = 'del'; del.textContent = '✕'; del.title = '删除';
+      del.onclick = async (e) => {
+        e.stopPropagation();
+        items.splice(i, 1);
+        await save();
+        render();
+      };
+      d.append(f, nm, del);
+      d.onclick = async () => {
+        try { await tbp.call('shell.open', { url: it.url }); }
+        catch (err) { tip('打开失败：' + err); }
+      };
+      list.appendChild(d);
+    });
+  }
+
+  function tip(msg) {
+    const t = document.getElementById('tip');
+    t.textContent = msg;
+    setTimeout(() => { t.textContent = '点击条目用浏览器打开 · 悬停出现删除按钮'; }, 2000);
+  }
+
+  async function addFromInputs() {
+    const name = document.getElementById('in-name').value.trim();
+    let url = document.getElementById('in-url').value.trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    try { new URL(url); } catch (e) { tip('网址格式不正确'); return; }
+    items.unshift({ name: name || hostOf(url), url });
+    await save();
+    document.getElementById('in-name').value = '';
+    document.getElementById('in-url').value = '';
+    render();
+  }
+
+  document.getElementById('btn-add').onclick = addFromInputs;
+  document.getElementById('in-url').onkeydown = (e) => { if (e.key === 'Enter') addFromInputs(); };
+
+  document.getElementById('more').onclick = (e) => { e.stopPropagation(); menu.classList.toggle('open'); };
+  document.getElementById('panel').onclick = () => menu.classList.remove('open');
+  document.getElementById('m-clear').onclick = async () => {
+    menu.classList.remove('open');
+    if (!confirm('清空全部网址收藏？')) return;
+    items = [];
+    await save();
+    render();
+  };
+  document.getElementById('m-export').onclick = async () => {
+    menu.classList.remove('open');
+    await tbp.call('clipboard.set', { text: JSON.stringify(items, null, 2) });
+    tip('已复制到剪贴板');
+  };
+  document.getElementById('m-import').onclick = async () => {
+    menu.classList.remove('open');
+    const text = await tbp.call('clipboard.history', { n: 1 });
+    try {
+      const arr = JSON.parse(text[0] && text[0].text || '[]');
+      if (!Array.isArray(arr)) throw new Error('not array');
+      let n = 0;
+      for (const it of arr) {
+        if (it && typeof it.url === 'string' && /^https?:\/\//i.test(it.url)) {
+          items.unshift({ name: String(it.name || hostOf(it.url)), url: it.url });
+          n++;
+        }
+      }
+      await save();
+      render();
+      tip('已导入 ' + n + ' 条');
+    } catch (e) { tip('剪贴板里没有可导入的 JSON'); }
+  };
+
+  document.getElementById('strip').onclick = async () => {
+    expanded = !expanded;
+    panel.classList.toggle('open', expanded);
+    menu.classList.remove('open');
+    if (expanded) await load();
+    render();
+    await tbp.call(expanded ? 'dock.expand' : 'dock.collapse', { height: 330 });
+  };
+  tbp.on('dock.collapsed', () => {
+    expanded = false;
+    panel.classList.remove('open');
+  });
+
+  await load();
+  render();
+  tbp.ready();
+})();
+</script>
+</body>
+</html>
