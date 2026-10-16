@@ -1,0 +1,31 @@
+{
+  "plugins": [
+    {
+      "id": "builtin.bookmarks",
+      "name": "网址收藏",
+      "version": "1.0.0",
+      "author": "TaskBar Plus",
+      "description": "任务栏网址收藏夹：点击条目浏览器直接跳转，支持增删与导入导出。",
+      "permissions": [
+        "shell",
+        "clipboard"
+      ],
+      "size": 9025,
+      "screenshots": [],
+      "path": "plugins/bookmarks"
+    },
+    {
+      "id": "builtin.vault",
+      "name": "密码保险箱",
+      "version": "1.0.0",
+      "author": "TaskBar Plus",
+      "description": "本地密码保险箱：主密码解锁，一键复制账号/密码，轻量加密存储。",
+      "permissions": [
+        "clipboard"
+      ],
+      "size": 12517,
+      "screenshots": [],
+      "path": "plugins/vault"
+    }
+  ]
+}
