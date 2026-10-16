@@ -1,0 +1,10 @@
+{
+  "id": "builtin.vault",
+  "name": "密码保险箱",
+  "version": "1.0.0",
+  "author": "TaskBar Plus",
+  "description": "本地密码保险箱：主密码解锁，一键复制账号/密码，轻量加密存储（防君子不防黑客）",
+  "permissions": ["clipboard"],
+  "width": { "min": 50, "max": 100, "default": 64 },
+  "config": { "data": "" }
+}
